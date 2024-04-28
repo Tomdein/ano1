@@ -18,5 +18,8 @@ find_package(OpenCV REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/opencv/build)
 link_libraries(${OpenCV_LIBS})
 
 include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/include)
+
+add_subdirectory(lib)
 
 add_subdirectory(exercise1)

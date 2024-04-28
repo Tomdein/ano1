@@ -1,3 +1,5 @@
-include_directories(./include)
+add_executable(exercise1 main.cpp)
 
-add_executable(exercise1 main.cpp floodfill.cpp color-generator.cpp)
+target_link_libraries(exercise1 ano-lib)
+
+target_include_directories(exercise1 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

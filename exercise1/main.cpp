@@ -4,8 +4,8 @@
 #include <opencv2/opencv.hpp>
 // #include <opencv2/imgcodecs.hpp>
 
-#include "include/floodfill.hpp"
-#include "include/color-generator.hpp"
+#include "floodfill.hpp"
+#include "color-generator.hpp"
 
 #define TEST_IMG_PATH "../../img/train.png"
 

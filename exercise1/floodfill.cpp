@@ -8,25 +8,22 @@ namespace ano
 {
 
     // combined-scan-and-fill span filler
-    void FloodFillInPlace(cv::Mat &img, cv::Point starting_pixel, unsigned char index)
+    template <typename T>
+    void FloodFillInPlace(cv::Mat &img, cv::Mat &img_out, const cv::Point &starting_pixel, const T &color)
     {
-        FloodFillInPlaceScanline(img, starting_pixel.x, starting_pixel.y, index);
+        FloodFillInPlace(img, img_out, starting_pixel.x, starting_pixel.y, color);
     }
 
     // combined-scan-and-fill span filler
-    void FloodFillInPlaceScanline(cv::Mat &img, int starting_x, int starting_y, unsigned char index)
+    template <typename T>
+    void FloodFillInPlace(cv::Mat &img, cv::Mat &img_out, int starting_x, int starting_y, const T &color)
     {
-        // 0 - background color
-        // 1 - item color
-        // 255 - checked pixels
-        assert(index != 0 && index != 255);
-
         auto xmax = img.size[1];
         decltype(xmax) xmin = 0;
         auto ymax = img.size[0];
         decltype(ymax) ymin = 0;
 
-        // https://lodev.org/cgtutor/floodfill.html
+        // Similar to: https://en.wikipedia.org/wiki/Flood_fill#:~:text=The%20final%2C%20combined%2Dscan%2Dand%2Dfill%20span%20filler%20was%20then%20published%20in%201990.%20In%20pseudo%2Dcode%20form
         if (img.at<unsigned char>(starting_y, starting_x) != 255)
         {
             std::cout << "FloodFill at [x,y]: [" << starting_x << ", " << starting_y << "] failed: Starting point on the background." << std::endl;
@@ -39,164 +36,7 @@ namespace ano
             return;
         }
 
-        // tuple of (x1,x2,y,dy)
-        using ff_tuple = std::tuple<int, int>;
-
-        int x1;
-        bool spanAbove, spanBelow;
-
-        std::queue<ff_tuple> queue;
-        queue.push(std::move(ff_tuple(starting_x, starting_y)));
-
-        while (!queue.empty())
-        {
-            auto [x, y] = queue.front();
-            queue.pop();
-
-            x1 = x;
-            while (x1 >= 0 && img.at<unsigned char>(y, x1) == 255)
-                x1--;
-            x1++;
-            spanAbove = spanBelow = 0;
-            while (x1 < xmax && img.at<unsigned char>(y, x1) == 255)
-            {
-                img.at<unsigned char>(y, x1) = index;
-                if (!spanAbove && y > 0 && img.at<unsigned char>(y - 1, x1) == 255)
-                {
-                    queue.emplace(x1, y - 1);
-                    spanAbove = 1;
-                }
-                else if (spanAbove && y > 0 && img.at<unsigned char>(y - 1, x1) != 255)
-                {
-                    spanAbove = 0;
-                }
-                if (!spanBelow && y < ymax - 1 && img.at<unsigned char>(y + 1, x1) == 255)
-                {
-                    queue.emplace(x1, y + 1);
-                    spanBelow = 1;
-                }
-                else if (spanBelow && y < ymax - 1 && img.at<unsigned char>(y + 1, x1) != 255)
-                {
-                    spanBelow = 0;
-                }
-                x1++;
-            }
-        }
-    }
-
-    // combined-scan-and-fill span filler
-    void FloodFillInPlaceWiki(cv::Mat &img, int starting_x, int starting_y, unsigned char index)
-    {
-        // 0 - background color
-        // 1 - item color
-        // 255 - checked pixels
-        assert(index != 0 && index != 255);
-
-        auto xmax = img.size[1];
-        decltype(xmax) xmin = 0;
-        auto ymax = img.size[0];
-        decltype(ymax) ymin = 0;
-
-        // https://en.wikipedia.org/wiki/Flood_fill#:~:text=The%20final%2C%20combined%2Dscan%2Dand%2Dfill%20span%20filler%20was%20then%20published%20in%201990.%20In%20pseudo%2Dcode%20form
-        // Graphics Gems I
-        if (img.at<unsigned char>(starting_y, starting_x) != 255)
-        {
-            std::cout << "FloodFill at [x,y]: [" << starting_x << ", " << starting_y << "] failed: Starting point on the background." << std::endl;
-            return;
-        }
-
-        if (starting_x < 0 || starting_x > xmax || starting_y < 0 || starting_y > ymax)
-        {
-            std::cout << "FloodFill at [x,y]: [" << starting_x << ", " << starting_y << "] failed: Starting point outside of image." << std::endl;
-            return;
-        }
-
-        // tuple of (x1,x2,y,dy)
-        using ff_tuple = std::tuple<int, int, int, int>;
-
-        std::queue<ff_tuple> queue;
-        queue.push(std::move(ff_tuple(starting_x, starting_x, starting_y, 1)));
-        queue.push(std::move(ff_tuple(starting_x, starting_x, starting_y + 1, -1)));
-
-        while (!queue.empty())
-        {
-            auto [x1, x2, y, dy] = queue.front();
-            queue.pop();
-
-            auto x = x1;
-
-            if (img.at<unsigned char>(y, x))
-            {
-                while (img.at<unsigned char>(y, x - 1))
-                {
-                    img.at<unsigned char>(y, x - 1) = index;
-                    x -= 1;
-                }
-
-                if (x < x1)
-                {
-                    queue.push(std::move(ff_tuple(x, x1 - 1, y - dy, -dy)));
-                }
-            }
-
-            while (x1 <= x2)
-            {
-                while (img.at<unsigned char>(y, x1))
-                {
-                    img.at<unsigned char>(y, x1) = index;
-                    x1 += 1;
-                }
-
-                if (x1 > x)
-                {
-                    queue.push(std::move(ff_tuple(x, x1 - 1, y + dy, dy)));
-                }
-
-                if (x1 - 1 > x)
-                {
-                    queue.push(std::move(ff_tuple(x2 + 1, x1 - 1, y - dy, -dy)));
-                }
-
-                x1 = x1 + 1;
-
-                while (x1 < x2 && !(img.at<unsigned char>(y, x1)))
-                {
-                    x1 += 1;
-                }
-
-                x = x1;
-            }
-        }
-    }
-
-    // combined-scan-and-fill span filler
-    void FloodFillInPlace(cv::Mat &img, int starting_x, int starting_y, unsigned char index)
-    {
-        // 0 - background color
-        // 1 - item color
-        // 255 - checked pixels
-        assert(index != 0 && index != 255);
-
-        auto xmax = img.size[1];
-        decltype(xmax) xmin = 0;
-        auto ymax = img.size[0];
-        decltype(ymax) ymin = 0;
-
-        // https://en.wikipedia.org/wiki/Flood_fill#:~:text=The%20final%2C%20combined%2Dscan%2Dand%2Dfill%20span%20filler%20was%20then%20published%20in%201990.%20In%20pseudo%2Dcode%20form
-        // Graphics Gems I
-        if (img.at<unsigned char>(starting_y, starting_x) != 255)
-        {
-            std::cout << "FloodFill at [x,y]: [" << starting_x << ", " << starting_y << "] failed: Starting point on the background." << std::endl;
-            return;
-        }
-
-        if (starting_x < 0 || starting_x > xmax || starting_y < 0 || starting_y > ymax)
-        {
-            std::cout << "FloodFill at [x,y]: [" << starting_x << ", " << starting_y << "] failed: Starting point outside of image." << std::endl;
-            return;
-        }
-
-        // tuple of (x1,x2,y,dy)
+        // tuple of (xl,xr,y,dy) - left end of line, right end of line, y, direction: 1 = down, -1 = up (opencv has reversed y axis)
         using ff_tuple = std::tuple<int, int, int, int>;
 
         std::queue<ff_tuple> queue;
@@ -205,66 +45,92 @@ namespace ano
 
         while (!queue.empty())
         {
-            auto [x1, x2, y, dy] = queue.front();
+            auto [xl, xr, y, dy] = queue.front();
             queue.pop();
 
-            auto x = x1;
-            auto start = x;
+            auto x = xl;
 
-            // Check all pixels to the left
-            while (x >= xmin && img.at<unsigned char>(y, x) == 255)
+            // Find the first pixel in the given line segment from queue
+            while (x < xr && !(img.at<unsigned char>(y, x) == 255))
             {
-                img.at<unsigned char>(y, x) = index;
-                x -= 1;
+                x++;
             }
 
-            // Add pixel to queue if found pixel to the left
-            if (x >= x1)
-                goto skip;
-
-            start = x + 1;
-
-            if (start < x1)
+            // Find the left edge
+            while (img.at<unsigned char>(y, x - 1) == 255)
             {
-                queue.push(std::move(ff_tuple(y, start, x1 - 1, -dy)));
+                img.at<unsigned char>(y, x - 1) = 128;
+                img_out.at<T>(y, x - 1) = color;
+                x--;
             }
 
-            x = x1 + 1;
-
-            do
+            // If expanded to the left -> add segment from left edge (x) to left side of checked segment (xl) in -dy
+            if (x < xl)
             {
-                // Check right pixels
-                while (x <= xmax && img.at<unsigned char>(y, x) == 255)
+                queue.emplace(x, xl - 1, y - dy, -dy);
+            }
+
+            // x is now the the new left edge
+            // Search between given line segment from queue
+            while (xl <= xr)
+            {
+                // Search the right edge for new segment
+                while (img.at<unsigned char>(y, xl) == 255)
                 {
-                    img.at<unsigned char>(y, x) = index;
-                    x += 1;
+                    img.at<unsigned char>(y, xl) = 128;
+                    img_out.at<T>(y, xl) = color;
+                    xl++;
                 }
 
-                queue.push(std::move(ff_tuple(start, x - 1, y, dy)));
-
-                if (x > x2 + 1)
+                // Found at least one pixel on the starting left edge -> add line segment to queue
+                if (xl > x)
                 {
-                    queue.push(std::move(ff_tuple(x2 + 1, x - 1, y, -dy)));
+                    // x is left edge, xl is one pixel to the right
+                    queue.emplace(x, xl - 1, y + dy, dy);
                 }
 
-            skip:
-                x += 1;
-
-                while (x <= x2 && !(img.at<unsigned char>(y, x) != 255))
+                // Expanded to the right -> add segment from right edge (xr) to right side of checked segment
+                if (xl - 1 > xr)
                 {
-                    x += 1;
+                    queue.emplace(xr + 1, xl - 1, y - dy, -dy);
                 }
 
-                start = x;
-            } while (x <= x2);
+                // The first while ended on background -> can add +1 as "speedup"
+                xl++;
+
+                // Find next segment above given line segment from queue
+                while (xl < xr && !(img.at<unsigned char>(y, xl) == 255))
+                {
+                    xl++;
+                }
+
+                // Move the left edge to the right
+                x = xl;
+            }
         }
     }
 
-    cv::Mat FloodFill(const cv::Mat &img, cv::Point starting_pixel, unsigned char index)
+    template <typename T>
+    inline cv::Mat FloodFill(cv::Mat &img, const cv::Point &starting_pixel, const T &color)
     {
-        cv::Mat img_indexed(img.size(), img.type());
-        FloodFillInPlace(img_indexed, starting_pixel, index);
-        return std::move(img_indexed);
+        return FloodFill(img, starting_pixel.x, starting_pixel.y, color);
     }
+
+    template <typename T>
+    inline cv::Mat FloodFill(cv::Mat &img, int starting_x, int starting_y, const T &color)
+    {
+        cv::Mat img_out(img.size(), CV_8UC3);
+        FloodFillInPlace(img, img_out, starting_x, starting_y, color);
+        return img_out;
+    }
+
+    template void FloodFillInPlace<unsigned char>(cv::Mat &, cv::Mat &, int, int, const unsigned char &);
+    template void FloodFillInPlace<cv::Vec3b>(cv::Mat &, cv::Mat &, int, int, const cv::Vec3b &);
+    template void FloodFillInPlace<unsigned char>(cv::Mat &, cv::Mat &, const cv::Point &, const unsigned char &);
+    template void FloodFillInPlace<cv::Vec3b>(cv::Mat &, cv::Mat &, const cv::Point &, const cv::Vec3b &);
+    template cv::Mat FloodFill<unsigned char>(cv::Mat &, int, int, const unsigned char &);
+    template cv::Mat FloodFill<cv::Vec3b>(cv::Mat &, int, int, const cv::Vec3b &);
+    template cv::Mat FloodFill<unsigned char>(cv::Mat &, const cv::Point &, const unsigned char &);
+    template cv::Mat FloodFill<cv::Vec3b>(cv::Mat &, const cv::Point &, const cv::Vec3b &);
 
 }

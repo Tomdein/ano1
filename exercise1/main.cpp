@@ -1,9 +1,11 @@
 #include <iostream>
+#include <cmath>
 
 #include <opencv2/opencv.hpp>
 // #include <opencv2/imgcodecs.hpp>
 
 #include "include/floodfill.hpp"
+#include "include/color-generator.hpp"
 
 #define TEST_IMG_PATH "../../img/train.png"
 
@@ -19,13 +21,11 @@ int main(int argc, char **argv)
 
     std::cout << "Size: " << image_in.size[0] << "," << image_in.size[1] << std::endl;
 
-    cv::namedWindow("Input", cv::WINDOW_NORMAL || cv::WINDOW_KEEPRATIO);
+    cv::namedWindow("Input", cv::WINDOW_AUTOSIZE);
     cv::imshow("Input", image_in);
 
-    std::cout << image_in.type() << std::endl;
-
     /* ============== THRESHOLDING ============== */
-    unsigned char threshold = 1;
+    unsigned char threshold = 50;
 
     cv::Mat image_threshold(image_in.size(), CV_8UC1);
     for (int y = 0; y < image_threshold.size[0]; y++)
@@ -37,31 +37,30 @@ int main(int argc, char **argv)
     }
     cv::namedWindow("Thresholding", cv::WINDOW_AUTOSIZE);
     cv::imshow("Thresholding", image_threshold);
-    cv::waitKey(0);
     /* ============== THRESHOLDING ============== */
 
     /* ============== Indexing ============== */
-    cv::Mat image_indexing = image_threshold.clone();
+    cv::Vec3b color_white(255, 255, 255);
 
-    unsigned char color_index = -2; // unsinged char max - 1 (unsigned char max is for foreground)
-    for (int y = 0; y < image_indexing.size[0]; y++)
+    auto color = ano::GenerateRandomColorBGR(color_white);
+    cv::Mat image_indexing = ano::FloodFill(image_threshold, 0, 0, color);
 
+    for (int y = 0; y < image_threshold.size[0]; y++)
     {
-        for (int x = 0; x < image_indexing.size[1]; x++)
+        for (int x = 0; x < image_threshold.size[1]; x++)
         {
-            if (image_indexing.at<unsigned char>(y, x) == 255)
+            if (image_threshold.at<unsigned char>(y, x) == 255)
             {
-                ano::FloodFillInPlace(image_indexing, x, y, color_index);
-                color_index -= 10;
-                cv::namedWindow("Indexing", cv::WINDOW_NORMAL || cv::WINDOW_KEEPRATIO);
-                cv::imshow("Indexing", image_indexing);
-                cv::waitKey(0);
+                color = ano::GenerateRandomColorBGR(color_white);
+                ano::FloodFillInPlace(image_threshold, image_indexing, x, y, color);
             }
         }
     }
+    cv::namedWindow("Indexing", cv::WINDOW_NORMAL || cv::WINDOW_KEEPRATIO);
+    cv::imshow("Indexing", image_indexing);
 
-    // cv::namedWindow("Indexing", cv::WINDOW_AUTOSIZE);
-    // cv::imshow("Indexing", image_indexing);
+    cv::namedWindow("Thresholding", cv::WINDOW_AUTOSIZE);
+    cv::imshow("Thresholding", image_threshold);
     /* ============== Indexing ============== */
 
     cv::waitKey(0);

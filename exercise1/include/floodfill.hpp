@@ -5,10 +5,13 @@
 namespace ano
 {
 
-    void FloodFillInPlace(cv::Mat &img, cv::Point starting_pixel, unsigned char index);
-    void FloodFillInPlace(cv::Mat &img, int starting_x, int starting_y, unsigned char index);
-    void FloodFillInPlaceScanline(cv::Mat &img, int starting_x, int starting_y, unsigned char index);
-    void FloodFillInPlaceWiki(cv::Mat &img, int starting_x, int starting_y, unsigned char index);
-    inline cv::Mat FloodFill(const cv::Mat &img, cv::Point starting_pixel, unsigned char index);
+    template <typename T>
+    void FloodFillInPlace(cv::Mat &img, cv::Mat &img_out, const cv::Point &starting_pixel, const T &color);
+    template <typename T>
+    void FloodFillInPlace(cv::Mat &img, cv::Mat &img_out, int starting_x, int starting_y, const T &color);
+    template <typename T>
+    inline cv::Mat FloodFill(cv::Mat &img, const cv::Point &starting_pixel, const T &color);
+    template <typename T>
+    inline cv::Mat FloodFill(cv::Mat &img, int starting_x, int starting_y, const T &color);
 
 }

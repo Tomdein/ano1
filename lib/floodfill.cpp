@@ -9,14 +9,14 @@ namespace ano
 
     // combined-scan-and-fill span filler
     template <typename T>
-    void FloodFillInPlace(cv::Mat &img, cv::Mat &img_out, const cv::Point &starting_pixel, const T &color)
+    void FloodFillInPlace(cv::Mat &img, cv::Mat &img_out, const cv::Point &starting_pixel, const T &color, const unsigned char index)
     {
-        FloodFillInPlace(img, img_out, starting_pixel.x, starting_pixel.y, color);
+        FloodFillInPlace(img, img_out, starting_pixel.x, starting_pixel.y, color, index);
     }
 
     // combined-scan-and-fill span filler
     template <typename T>
-    void FloodFillInPlace(cv::Mat &img, cv::Mat &img_out, int starting_x, int starting_y, const T &color)
+    void FloodFillInPlace(cv::Mat &img, cv::Mat &img_out, int starting_x, int starting_y, const T &color, const unsigned char index)
     {
         auto xmax = img.size[1];
         decltype(xmax) xmin = 0;
@@ -59,7 +59,7 @@ namespace ano
             // Find the left edge
             while (img.at<unsigned char>(y, x - 1) == 255)
             {
-                img.at<unsigned char>(y, x - 1) = 128;
+                img.at<unsigned char>(y, x - 1) = index;
                 img_out.at<T>(y, x - 1) = color;
                 x--;
             }
@@ -77,7 +77,7 @@ namespace ano
                 // Search the right edge for new segment
                 while (img.at<unsigned char>(y, xl) == 255)
                 {
-                    img.at<unsigned char>(y, xl) = 128;
+                    img.at<unsigned char>(y, xl) = index;
                     img_out.at<T>(y, xl) = color;
                     xl++;
                 }
@@ -111,26 +111,26 @@ namespace ano
     }
 
     template <typename T>
-    inline cv::Mat FloodFill(cv::Mat &img, const cv::Point &starting_pixel, const T &color)
+    inline cv::Mat FloodFill(cv::Mat &img, const cv::Point &starting_pixel, const T &color, const unsigned char index)
     {
-        return FloodFill(img, starting_pixel.x, starting_pixel.y, color);
+        return FloodFill(img, starting_pixel.x, starting_pixel.y, color, index);
     }
 
     template <typename T>
-    inline cv::Mat FloodFill(cv::Mat &img, int starting_x, int starting_y, const T &color)
+    inline cv::Mat FloodFill(cv::Mat &img, int starting_x, int starting_y, const T &color, const unsigned char index)
     {
         cv::Mat img_out(img.size(), CV_8UC3);
-        FloodFillInPlace(img, img_out, starting_x, starting_y, color);
+        FloodFillInPlace(img, img_out, starting_x, starting_y, color, index);
         return img_out;
     }
 
-    template void FloodFillInPlace<unsigned char>(cv::Mat &, cv::Mat &, int, int, const unsigned char &);
-    template void FloodFillInPlace<cv::Vec3b>(cv::Mat &, cv::Mat &, int, int, const cv::Vec3b &);
-    template void FloodFillInPlace<unsigned char>(cv::Mat &, cv::Mat &, const cv::Point &, const unsigned char &);
-    template void FloodFillInPlace<cv::Vec3b>(cv::Mat &, cv::Mat &, const cv::Point &, const cv::Vec3b &);
-    template cv::Mat FloodFill<unsigned char>(cv::Mat &, int, int, const unsigned char &);
-    template cv::Mat FloodFill<cv::Vec3b>(cv::Mat &, int, int, const cv::Vec3b &);
-    template cv::Mat FloodFill<unsigned char>(cv::Mat &, const cv::Point &, const unsigned char &);
-    template cv::Mat FloodFill<cv::Vec3b>(cv::Mat &, const cv::Point &, const cv::Vec3b &);
+    template void FloodFillInPlace<unsigned char>(cv::Mat &, cv::Mat &, int, int, const unsigned char &, const unsigned char);
+    template void FloodFillInPlace<cv::Vec3b>(cv::Mat &, cv::Mat &, int, int, const cv::Vec3b &, const unsigned char);
+    template void FloodFillInPlace<unsigned char>(cv::Mat &, cv::Mat &, const cv::Point &, const unsigned char &, const unsigned char);
+    template void FloodFillInPlace<cv::Vec3b>(cv::Mat &, cv::Mat &, const cv::Point &, const cv::Vec3b &, const unsigned char);
+    template cv::Mat FloodFill<unsigned char>(cv::Mat &, int, int, const unsigned char &, const unsigned char);
+    template cv::Mat FloodFill<cv::Vec3b>(cv::Mat &, int, int, const cv::Vec3b &, const unsigned char);
+    template cv::Mat FloodFill<unsigned char>(cv::Mat &, const cv::Point &, const unsigned char &, const unsigned char);
+    template cv::Mat FloodFill<cv::Vec3b>(cv::Mat &, const cv::Point &, const cv::Vec3b &, const unsigned char);
 
 }

@@ -58,4 +58,42 @@ namespace ano
             cv::putText(img, "Class: " + std::to_string(id_class), cv::Point(x + text_x_offset, y + 3 * TEXT_LINE_HEIGHT), TEXT_FONT, TEXT_SIZE, color);
         }
     }
+
+    void Ethalons::AddEthalons(unsigned char id_class, const std::vector<float> &ethalons, const cv::Vec3b &color)
+    {
+        Ethalons::AddEthalons(id_class, std::vector<float>(ethalons), color);
+    }
+
+    void Ethalons::AddEthalons(unsigned char id_class, std::vector<float> &&ethalons, const cv::Vec3b &color)
+    {
+        this->ethalons.emplace_back(id_class, std::move(ethalons), color);
+    }
+
+    std::vector<float> Ethalons::GetEthalonsByClass(unsigned char id_class)
+    {
+
+        auto it = std::find_if(ethalons.begin(), ethalons.end(), [id_class](const auto &ethalon)
+                               { return std::get<0>(ethalon) == id_class; });
+
+        if (it == ethalons.end())
+        {
+            return {};
+        }
+
+        return std::get<1>(*it);
+    }
+
+    cv::Vec3b Ethalons::GetColorByClass(unsigned char id_class)
+    {
+
+        auto it = std::find_if(ethalons.begin(), ethalons.end(), [id_class](const auto &ethalon)
+                               { return std::get<0>(ethalon) == id_class; });
+
+        if (it == ethalons.end())
+        {
+            return {};
+        }
+
+        return std::get<2>(*it);
+    }
 }

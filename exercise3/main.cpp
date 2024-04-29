@@ -51,13 +51,12 @@ int main(int argc, char **argv)
     /* ============== THRESHOLDING ============== */
 
     /* ============== Indexing ============== */
-    cv::Vec3b color_white(255, 255, 255);
-
-    auto color = ano::GenerateRandomColorBGR(color_white);
+    auto color = ano::GenerateRandomColorBGR();
     cv::Mat image_indexing = cv::Mat::zeros(image_threshold.size(), CV_8UC3);
 
     ano::DetectedObjectsVector detected_objects;
 
+    // Starting id
     unsigned char object_index = -2; // char max - 1 (as 255 is reserved for foreground)
     Indexing(image_threshold, image_indexing, detected_objects, object_index, color);
 
@@ -74,23 +73,33 @@ int main(int argc, char **argv)
     /* ============== Moments ============== */
 
     /* ============== Ethalons ============== */
+    ano::Ethalons ethalons;
+
+    // Calculate ethalons
     auto class1_ethalon_f1 = ano::GetEthalonF1(detected_objects, 1);
     auto class1_ethalon_f2 = ano::GetEthalonF2(detected_objects, 1);
+    auto color1 = ano::GenerateRandomColorBGR();
+    ethalons.AddEthalons(1, {class1_ethalon_f1, class1_ethalon_f2}, color1);
+
     auto class2_ethalon_f1 = ano::GetEthalonF1(detected_objects, 2);
     auto class2_ethalon_f2 = ano::GetEthalonF2(detected_objects, 2);
+    auto color2 = ano::GenerateRandomColorBGR();
+    ethalons.AddEthalons(2, {class2_ethalon_f1, class2_ethalon_f2}, color2);
+
     auto class3_ethalon_f1 = ano::GetEthalonF1(detected_objects, 3);
     auto class3_ethalon_f2 = ano::GetEthalonF2(detected_objects, 3);
-
-    auto image_ethalons = cv::Mat(image_threshold.size(), CV_8UC3);
-    auto color1 = ano::GenerateRandomColorBGR();
-    auto color2 = ano::GenerateRandomColorBGR();
     auto color3 = ano::GenerateRandomColorBGR();
+    ethalons.AddEthalons(3, {class3_ethalon_f1, class3_ethalon_f2}, color3);
+
+    // Draw ethalons
+    auto image_ethalons = cv::Mat(image_threshold.size(), CV_8UC3);
     float f1_scale = 1.f;
     float f2_scale = 0.5f;
     ano::DrawEthalonWithText(image_ethalons, class1_ethalon_f1, class1_ethalon_f2, 3, color1 * 0.5f, f1_scale, f2_scale, 1);
     ano::DrawEthalonWithText(image_ethalons, class2_ethalon_f1, class2_ethalon_f2, 3, color2 * 0.5f, f1_scale, f2_scale, 2);
     ano::DrawEthalonWithText(image_ethalons, class3_ethalon_f1, class3_ethalon_f2, 3, color3 * 0.5f, f1_scale, f2_scale, 3);
 
+    ano::DetectedObjectsVector detected_test_objects;
     std::for_each(detected_objects.begin(), detected_objects.end(), [&](ano::DetectedObject &detected) -> void
                   {
         const auto &c = (detected.id_class == 1)? color1 : ((detected.id_class == 2)? color2 : color3);

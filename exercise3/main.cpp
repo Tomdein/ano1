@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <optional>
 
 #include <opencv2/opencv.hpp>
 
@@ -10,7 +11,10 @@
 #include "detected-object.hpp"
 #include "ethalons.hpp"
 
+#define TRAIN_IMG_PATH "../../img/train.png"
+#define TRAIN_IMG_NAME "Training_image"
 #define TEST_IMG_PATH "../../img/train.png"
+#define TEST_IMG_NAME "Test_image"
 
 unsigned char id_map[][2] = {
     {243, 1}, {244, 1}, {245, 1}, {246, 1}, //
@@ -25,23 +29,25 @@ unsigned char id_map[][2] = {
 };
 
 void Threshold(const cv::Mat &image_in, cv::Mat &image_threshold, unsigned char threshold);
-void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedObjectsVector &detected_objects, unsigned char &object_index, cv::Vec3b &color_for_mixing);
+// Flood fill threshold image and save colored result in image_indexing. Also save info about detected objects (id, x, y) in detected_objects.
+// object_index - starting id for indexing. Decrements for each new object.
+// assign_class_from_map - used to assign class from id_map for training ethalons from training images.
+void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedObjectsVector &detected_objects, unsigned char &object_index, cv::Vec3b &color_for_mixing, bool assign_class_from_map = false);
+// Calculate moments of all detected objects starting from id == object_index up to id == 254 (including 254)
 void Moments(const cv::Mat &image_threshold, ano::DetectedObjectsVector &detected_objects, unsigned char object_index);
+// Load image from file.
+std::optional<cv::Mat> LoadImage(const cv::String &filename, const cv::String &window_name = "", bool show_img = true, int flags = 1);
 
 int main(int argc, char **argv)
 {
-    cv::Mat image_in = cv::imread(TEST_IMG_PATH, cv::IMREAD_GRAYSCALE);
-
-    if (!image_in.data)
+    // Load training image.
+    auto img_opt = LoadImage(TRAIN_IMG_PATH, TRAIN_IMG_NAME, true, cv::IMREAD_GRAYSCALE);
+    if (!img_opt.has_value())
     {
-        printf("No image data \n");
+        printf("No image\n");
         return -1;
     }
-
-    std::cout << "Size: " << image_in.size[0] << "," << image_in.size[1] << std::endl;
-
-    cv::namedWindow("Input", cv::WINDOW_AUTOSIZE);
-    cv::imshow("Input", image_in);
+    cv::Mat image_in = img_opt.value();
 
     /* ============== THRESHOLDING ============== */
     unsigned char threshold = 50;
@@ -58,7 +64,7 @@ int main(int argc, char **argv)
 
     // Starting id
     unsigned char object_index = -2; // char max - 1 (as 255 is reserved for foreground)
-    Indexing(image_threshold, image_indexing, detected_objects, object_index, color);
+    Indexing(image_threshold, image_indexing, detected_objects, object_index, color, true);
 
     cv::namedWindow("Indexing", cv::WINDOW_NORMAL || cv::WINDOW_KEEPRATIO);
     cv::imshow("Indexing", image_indexing);
@@ -114,6 +120,30 @@ int main(int argc, char **argv)
     return 0;
 }
 
+std::optional<cv::Mat> LoadImage(const cv::String &filename, const cv::String &window_name, bool show_img, int flags)
+{
+    cv::Mat image_in = cv::imread(TRAIN_IMG_PATH, cv::IMREAD_GRAYSCALE);
+
+    if (!image_in.data)
+    {
+        printf("No image data \n");
+        return {};
+    }
+
+    std::cout << "Image '" << TRAIN_IMG_PATH << "', "
+              << "Size: " << image_in.size[0] << "," << image_in.size[1] << "\n"
+              << std::endl;
+
+    if (show_img)
+    {
+        auto name = (window_name.empty()) ? filename : window_name;
+        cv::namedWindow(window_name, cv::WINDOW_AUTOSIZE);
+        cv::imshow(window_name, image_in);
+    }
+
+    return image_in;
+}
+
 void Threshold(const cv::Mat &image_in, cv::Mat &image_threshold, unsigned char threshold)
 {
     for (int y = 0; y < image_threshold.size[0]; y++)
@@ -125,7 +155,7 @@ void Threshold(const cv::Mat &image_in, cv::Mat &image_threshold, unsigned char 
     }
 }
 
-void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedObjectsVector &detected_objects, unsigned char &object_index, cv::Vec3b &color_for_mixing)
+void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedObjectsVector &detected_objects, unsigned char &object_index, cv::Vec3b &color_for_mixing, bool assign_class_from_map)
 {
     for (int y = 0; y < image_threshold.size[0]; y++)
     {
@@ -140,6 +170,13 @@ void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedOb
                 // Get the class label
                 auto obj_id_it = std::find_if(std::begin(id_map), std::end(id_map), [&object_index](const auto &map_pair)
                                               { return map_pair[0] == object_index; });
+
+                // Skip the class assignment if it is not required
+                if (!assign_class_from_map)
+                {
+                    obj_id_it = std::end(id_map);
+                }
+
                 unsigned char obj_id = 0;
                 if (obj_id_it != std::end(id_map))
                 {

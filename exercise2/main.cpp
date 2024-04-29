@@ -3,19 +3,13 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "text.hpp"
 #include "floodfill.hpp"
 #include "color-generator.hpp"
 #include "moments.hpp"
 #include "detected-object.hpp"
 
 #define TEST_IMG_PATH "../../img/train.png"
-
-#define TEXT_COLOR (cv::Vec3b(255, 255, 255))
-#define TEXT_FONT FONT_HERSHEY_PLAIN
-#define TEXT_SIZE_SIMPLEX 0.3f
-#define TEXT_LINE_HEIGHT_SIMPLEX (TEXT_SIZE_SIMPLEX * 21 + 2)
-#define TEXT_SIZE 0.7f
-#define TEXT_LINE_HEIGHT (TEXT_SIZE * 9 + 2)
 
 unsigned char id_map[][2] = {
     {243, 1}, {244, 1}, {245, 1}, {246, 1}, //
@@ -93,8 +87,8 @@ int main(int argc, char **argv)
                 }
 
                 // Output info to the image
-                cv::putText(image_indexing, "ID: " + std::to_string(object_index), cv::Point(x, y), cv::TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
-                cv::putText(image_indexing, "Class: " + std::to_string(object_index), cv::Point(x, y + TEXT_LINE_HEIGHT), cv::TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
+                cv::putText(image_indexing, "ID: " + std::to_string(object_index), cv::Point(x, y), TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
+                cv::putText(image_indexing, "Class: " + std::to_string(object_index), cv::Point(x, y + TEXT_LINE_HEIGHT), TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
 
                 // Decrement id
                 object_index--;

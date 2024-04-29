@@ -30,5 +30,6 @@ namespace ano
         void AddEthalons(unsigned char id_class, const std::vector<float> &ethalons, const cv::Vec3b &color);
         std::vector<float> GetEthalonsByClass(unsigned char id_class);
         cv::Vec3b GetColorByClass(unsigned char id_class);
+        unsigned char FindClosestClass(const std::vector<float> &ethalons);
     };
 }

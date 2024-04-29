@@ -13,7 +13,7 @@
 
 #define TRAIN_IMG_PATH "../../img/train.png"
 #define TRAIN_IMG_NAME "Training_image"
-#define TEST_IMG_PATH "../../img/train.png"
+#define TEST_IMG_PATH "../../img/test02.png"
 #define TEST_IMG_NAME "Test_image"
 
 unsigned char id_map[][2] = {
@@ -32,11 +32,13 @@ void Threshold(const cv::Mat &image_in, cv::Mat &image_threshold, unsigned char 
 // Flood fill threshold image and save colored result in image_indexing. Also save info about detected objects (id, x, y) in detected_objects.
 // object_index - starting id for indexing. Decrements for each new object.
 // assign_class_from_map - used to assign class from id_map for training ethalons from training images.
-void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedObjectsVector &detected_objects, unsigned char &object_index, cv::Vec3b &color_for_mixing, bool assign_class_from_map = false);
+void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedObjectsVector &detected_objects, unsigned char &object_index, const cv::Vec3b &color_for_mixing, bool assign_class_from_map = false);
 // Calculate moments of all detected objects starting from id == object_index up to id == 254 (including 254)
 void Moments(const cv::Mat &image_threshold, ano::DetectedObjectsVector &detected_objects, unsigned char object_index);
 // Load image from file.
 std::optional<cv::Mat> LoadImage(const cv::String &filename, const cv::String &window_name = "", bool show_img = true, int flags = 1);
+// Calculate and draw class ethalons
+void ClassEthalons(cv::Mat &image_ethalons, const ano::DetectedObjectsVector &detected_objects, ano::Ethalons &ethalons, float f1_scale, float f2_scale);
 
 int main(int argc, char **argv)
 {
@@ -49,67 +51,84 @@ int main(int argc, char **argv)
     }
     cv::Mat image_in = img_opt.value();
 
+    // Load test image.
+    img_opt = LoadImage(TEST_IMG_PATH, TEST_IMG_NAME, true, cv::IMREAD_GRAYSCALE);
+    if (!img_opt.has_value())
+    {
+        printf("No image\n");
+        return -1;
+    }
+    cv::Mat image_test = img_opt.value();
+
     /* ============== THRESHOLDING ============== */
     unsigned char threshold = 50;
 
-    cv::Mat image_threshold(image_in.size(), CV_8UC1);
-    Threshold(image_in, image_threshold, threshold);
+    // Threshold training image.
+    cv::Mat image_threshold_train(image_in.size(), CV_8UC1);
+    Threshold(image_in, image_threshold_train, threshold);
+
+    // Threshold test image.
+    cv::Mat image_threshold_test(image_test.size(), CV_8UC1);
+    Threshold(image_test, image_threshold_test, threshold);
     /* ============== THRESHOLDING ============== */
 
     /* ============== Indexing ============== */
-    auto color = ano::GenerateRandomColorBGR();
-    cv::Mat image_indexing = cv::Mat::zeros(image_threshold.size(), CV_8UC3);
+    cv::Mat image_indexing_train = cv::Mat(image_threshold_train.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+    cv::Mat image_indexing_test = cv::Mat(image_threshold_test.size(), CV_8UC3, cv::Scalar(0, 0, 0));
 
-    ano::DetectedObjectsVector detected_objects;
+    ano::DetectedObjectsVector detected_objects_train;
+    ano::DetectedObjectsVector detected_objects_test;
 
+    // Train
     // Starting id
-    unsigned char object_index = -2; // char max - 1 (as 255 is reserved for foreground)
-    Indexing(image_threshold, image_indexing, detected_objects, object_index, color, true);
+    unsigned char object_index_train = -2; // char max - 1 (as 255 is reserved for foreground)
+    Indexing(image_threshold_train, image_indexing_train, detected_objects_train, object_index_train, {255, 255, 255}, true);
 
-    cv::namedWindow("Indexing", cv::WINDOW_NORMAL || cv::WINDOW_KEEPRATIO);
-    cv::imshow("Indexing", image_indexing);
+    cv::namedWindow("Indexing train", cv::WINDOW_NORMAL || cv::WINDOW_KEEPRATIO);
+    cv::imshow("Indexing train", image_indexing_train);
 
-    cv::namedWindow("Thresholding", cv::WINDOW_AUTOSIZE);
-    cv::imshow("Thresholding", image_threshold);
+    cv::namedWindow("Thresholding train", cv::WINDOW_AUTOSIZE);
+    cv::imshow("Thresholding train", image_threshold_train);
+
+    // Test
+    // Starting id
+    unsigned char object_index_test = -2; // char max - 1 (as 255 is reserved for foreground)
+    // Do not assign class from id_map
+    Indexing(image_threshold_test, image_indexing_test, detected_objects_test, object_index_test, {255, 255, 255}, false);
+
+    cv::namedWindow("Thresholding test", cv::WINDOW_AUTOSIZE);
+    cv::imshow("Thresholding test", image_threshold_test);
     /* ============== Indexing ============== */
 
     /* ============== Moments ============== */
     // Iterate through all indexed objects
-    Moments(image_threshold, detected_objects, object_index + 1);
+    Moments(image_threshold_train, detected_objects_train, object_index_train + 1);
+    Moments(image_threshold_test, detected_objects_test, object_index_test + 1);
     /* ============== Moments ============== */
 
     /* ============== Ethalons ============== */
     ano::Ethalons ethalons;
 
-    // Calculate ethalons
-    auto class1_ethalon_f1 = ano::GetEthalonF1(detected_objects, 1);
-    auto class1_ethalon_f2 = ano::GetEthalonF2(detected_objects, 1);
-    auto color1 = ano::GenerateRandomColorBGR();
-    ethalons.AddEthalons(1, {class1_ethalon_f1, class1_ethalon_f2}, color1);
-
-    auto class2_ethalon_f1 = ano::GetEthalonF1(detected_objects, 2);
-    auto class2_ethalon_f2 = ano::GetEthalonF2(detected_objects, 2);
-    auto color2 = ano::GenerateRandomColorBGR();
-    ethalons.AddEthalons(2, {class2_ethalon_f1, class2_ethalon_f2}, color2);
-
-    auto class3_ethalon_f1 = ano::GetEthalonF1(detected_objects, 3);
-    auto class3_ethalon_f2 = ano::GetEthalonF2(detected_objects, 3);
-    auto color3 = ano::GenerateRandomColorBGR();
-    ethalons.AddEthalons(3, {class3_ethalon_f1, class3_ethalon_f2}, color3);
-
-    // Draw ethalons
-    auto image_ethalons = cv::Mat(image_threshold.size(), CV_8UC3);
     float f1_scale = 1.f;
     float f2_scale = 0.5f;
-    ano::DrawEthalonWithText(image_ethalons, class1_ethalon_f1, class1_ethalon_f2, 3, color1 * 0.5f, f1_scale, f2_scale, 1);
-    ano::DrawEthalonWithText(image_ethalons, class2_ethalon_f1, class2_ethalon_f2, 3, color2 * 0.5f, f1_scale, f2_scale, 2);
-    ano::DrawEthalonWithText(image_ethalons, class3_ethalon_f1, class3_ethalon_f2, 3, color3 * 0.5f, f1_scale, f2_scale, 3);
+    auto image_ethalons = cv::Mat(image_threshold_train.size(), CV_8UC3);
 
-    ano::DetectedObjectsVector detected_test_objects;
-    std::for_each(detected_objects.begin(), detected_objects.end(), [&](ano::DetectedObject &detected) -> void
+    ClassEthalons(image_ethalons, detected_objects_train, ethalons, f1_scale, f2_scale);
+
+    std::for_each(detected_objects_test.begin(), detected_objects_test.end(), [&](ano::DetectedObject &detected) -> void
                   {
-        const auto &c = (detected.id_class == 1)? color1 : ((detected.id_class == 2)? color2 : color3);
+        // Return color by class. White if class not found.
+        detected.id_class = ethalons.FindClosestClass({detected.features.F1, detected.features.F2});
+        const auto &c = (detected.id_class == 1)? ethalons.GetColorByClass(1) : ((detected.id_class == 2)? ethalons.GetColorByClass(2) : ((detected.id_class == 3)? ethalons.GetColorByClass(3) : cv::Vec3b{255, 255, 255}));
+        
+        // Draw class to colored image after assigning closes class.
+        detected.DrawClass(image_indexing_test, 0, TEXT_LINE_HEIGHT);
+
+        // Plot features next to ethalons. 
         ano::DrawEthalon(image_ethalons, detected.features.F1, detected.features.F2, 1, c, f1_scale, f2_scale); });
+
+    cv::namedWindow("Indexing test", cv::WINDOW_NORMAL || cv::WINDOW_KEEPRATIO);
+    cv::imshow("Indexing test", image_indexing_test);
 
     cv::namedWindow("Ethalons", cv::WINDOW_AUTOSIZE);
     cv::imshow("Ethalons", image_ethalons);
@@ -130,7 +149,7 @@ std::optional<cv::Mat> LoadImage(const cv::String &filename, const cv::String &w
         return {};
     }
 
-    std::cout << "Image '" << TRAIN_IMG_PATH << "', "
+    std::cout << "Image '" << filename << "', "
               << "Size: " << image_in.size[0] << "," << image_in.size[1] << "\n"
               << std::endl;
 
@@ -155,7 +174,7 @@ void Threshold(const cv::Mat &image_in, cv::Mat &image_threshold, unsigned char 
     }
 }
 
-void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedObjectsVector &detected_objects, unsigned char &object_index, cv::Vec3b &color_for_mixing, bool assign_class_from_map)
+void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedObjectsVector &detected_objects, unsigned char &object_index, const cv::Vec3b &color_for_mixing, bool assign_class_from_map)
 {
     for (int y = 0; y < image_threshold.size[0]; y++)
     {
@@ -188,7 +207,10 @@ void Indexing(cv::Mat &image_threshold, cv::Mat &image_indexing, ano::DetectedOb
 
                 // Output info to the image
                 cv::putText(image_indexing, "ID: " + std::to_string(object_index), cv::Point(x, y), TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
-                cv::putText(image_indexing, "Class: " + std::to_string(obj_id), cv::Point(x, y + TEXT_LINE_HEIGHT), TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
+                if (obj_id != 0)
+                {
+                    cv::putText(image_indexing, "Class: " + std::to_string(obj_id), cv::Point(x, y + TEXT_LINE_HEIGHT), TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
+                }
 
                 // Decrement id
                 object_index--;
@@ -234,4 +256,28 @@ void Moments(const cv::Mat &image_threshold, ano::DetectedObjectsVector &detecte
             obj_features.F2 = F2;
         }
     }
+}
+
+void ClassEthalons(cv::Mat &image_ethalons, const ano::DetectedObjectsVector &detected_objects, ano::Ethalons &ethalons, float f1_scale, float f2_scale)
+{
+    // Calculate ethalons
+    auto class1_ethalon_f1 = ano::GetEthalonF1(detected_objects, 1);
+    auto class1_ethalon_f2 = ano::GetEthalonF2(detected_objects, 1);
+    auto color1 = ano::GenerateRandomColorBGR();
+    ethalons.AddEthalons(1, {class1_ethalon_f1, class1_ethalon_f2}, color1);
+
+    auto class2_ethalon_f1 = ano::GetEthalonF1(detected_objects, 2);
+    auto class2_ethalon_f2 = ano::GetEthalonF2(detected_objects, 2);
+    auto color2 = ano::GenerateRandomColorBGR();
+    ethalons.AddEthalons(2, {class2_ethalon_f1, class2_ethalon_f2}, color2);
+
+    auto class3_ethalon_f1 = ano::GetEthalonF1(detected_objects, 3);
+    auto class3_ethalon_f2 = ano::GetEthalonF2(detected_objects, 3);
+    auto color3 = ano::GenerateRandomColorBGR();
+    ethalons.AddEthalons(3, {class3_ethalon_f1, class3_ethalon_f2}, color3);
+
+    // Draw ethalons
+    ano::DrawEthalonWithText(image_ethalons, class1_ethalon_f1, class1_ethalon_f2, 3, color1 * 0.5f, f1_scale, f2_scale, 1);
+    ano::DrawEthalonWithText(image_ethalons, class2_ethalon_f1, class2_ethalon_f2, 3, color2 * 0.5f, f1_scale, f2_scale, 2);
+    ano::DrawEthalonWithText(image_ethalons, class3_ethalon_f1, class3_ethalon_f2, 3, color3 * 0.5f, f1_scale, f2_scale, 3);
 }

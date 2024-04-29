@@ -39,6 +39,14 @@ namespace ano
         {
             return id_pixel == other.id_pixel;
         }
+
+        void DrawXY(cv::Mat &image, int x_offset = 0, int y_offset = 0, const cv::Vec3b &color = {255, 255, 255}) const;
+        void DrawWH(cv::Mat &image, int x_offset = 0, int y_offset = 0, const cv::Vec3b &color = {255, 255, 255}) const;
+        void DrawId(cv::Mat &image, int x_offset = 0, int y_offset = 0, const cv::Vec3b &color = {255, 255, 255}) const;
+        void DrawClass(cv::Mat &image, int x_offset = 0, int y_offset = 0, const cv::Vec3b &color = {255, 255, 255}) const;
+
+    private:
+        void DrawText(cv::Mat &image, const std::string &text, int x_offset = 0, int y_offset = 0, const cv::Vec3b &color = {255, 255, 255}) const;
     };
 
     using DetectedObjectsVector = std::vector<DetectedObject>;

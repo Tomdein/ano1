@@ -96,4 +96,34 @@ namespace ano
 
         return std::get<2>(*it);
     }
+
+    unsigned char Ethalons::FindClosestClass(const std::vector<float> &ethalons)
+    {
+        unsigned char closest_class = 0;
+        float closest_distance = std::numeric_limits<float>::max();
+
+        for (const auto &ethalon : this->ethalons)
+        {
+            float distance = 0;
+
+            // Sum squares
+            int i = 0;
+            for (; i < std::get<1>(ethalon).size(); i++)
+            {
+                distance += std::pow(ethalons.at(i) - std::get<1>(ethalon).at(i), 2);
+            }
+
+            // Calculate euclidian distance
+            distance = std::sqrt(distance);
+
+            // Compare with closest distance
+            if (distance < closest_distance)
+            {
+                closest_distance = distance;
+                closest_class = std::get<0>(ethalon);
+            }
+        }
+
+        return closest_class;
+    }
 }

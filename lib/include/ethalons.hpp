@@ -26,10 +26,22 @@ namespace ano
         std::vector<std::tuple<unsigned char, std::vector<float>, cv::Vec3b>> ethalons;
 
     public:
+        // Add more ethalons to storage
         void AddEthalons(unsigned char id_class, std::vector<float> &&ethalons, const cv::Vec3b &color);
         void AddEthalons(unsigned char id_class, const std::vector<float> &ethalons, const cv::Vec3b &color);
+
+        // Get forward iterator to the first ethalon
+        std::vector<std::tuple<unsigned char, std::vector<float>, cv::Vec3b>>::iterator begin();
+        // Get forward iterator to one after the end ethalon
+        std::vector<std::tuple<unsigned char, std::vector<float>, cv::Vec3b>>::iterator end();
+
+        // Get ethalon features by class id
         std::vector<float> GetEthalonsByClass(unsigned char id_class);
+
+        // Get ethalon color by class id
         cv::Vec3b GetColorByClass(unsigned char id_class);
+
+        // Find closest class id of ethalon from given values
         unsigned char FindClosestClass(const std::vector<float> &ethalons);
     };
 }

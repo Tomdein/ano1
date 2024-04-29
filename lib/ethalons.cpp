@@ -69,6 +69,16 @@ namespace ano
         this->ethalons.emplace_back(id_class, std::move(ethalons), color);
     }
 
+    std::vector<std::tuple<unsigned char, std::vector<float>, cv::Vec3b>>::iterator Ethalons::begin()
+    {
+        return this->ethalons.begin();
+    }
+
+    std::vector<std::tuple<unsigned char, std::vector<float>, cv::Vec3b>>::iterator Ethalons::end()
+    {
+        return this->ethalons.end();
+    }
+
     std::vector<float> Ethalons::GetEthalonsByClass(unsigned char id_class)
     {
 

@@ -6,8 +6,28 @@
 #include "floodfill.hpp"
 #include "color-generator.hpp"
 #include "moments.hpp"
+#include "detected-object.hpp"
 
 #define TEST_IMG_PATH "../../img/train.png"
+
+#define TEXT_COLOR (cv::Vec3b(255, 255, 255))
+#define TEXT_FONT FONT_HERSHEY_PLAIN
+#define TEXT_SIZE_SIMPLEX 0.3f
+#define TEXT_LINE_HEIGHT_SIMPLEX (TEXT_SIZE_SIMPLEX * 21 + 2)
+#define TEXT_SIZE 0.7f
+#define TEXT_LINE_HEIGHT (TEXT_SIZE * 9 + 2)
+
+unsigned char id_map[][2] = {
+    {243, 1}, {244, 1}, {245, 1}, {246, 1}, //
+    {247, 2},
+    {248, 2},
+    {249, 2},
+    {250, 2}, //
+    {251, 3},
+    {252, 3},
+    {253, 3},
+    {254, 3}, //
+};
 
 int main(int argc, char **argv)
 {
@@ -45,6 +65,8 @@ int main(int argc, char **argv)
     auto color = ano::GenerateRandomColorBGR(color_white);
     cv::Mat image_indexing = ano::FloodFill(image_threshold, 0, 0, color);
 
+    ano::DetectedObjectsVector detected_objects;
+
     unsigned char object_index = -2; // char max - 1 (as 255 is reserved for foreground)
     for (int y = 0; y < image_threshold.size[0]; y++)
     {
@@ -52,8 +74,29 @@ int main(int argc, char **argv)
         {
             if (image_threshold.at<unsigned char>(y, x) == 255)
             {
+                // Fill with random color
                 color = ano::GenerateRandomColorBGR(color_white);
                 ano::FloodFillInPlace(image_threshold, image_indexing, x, y, color, object_index);
+
+                // Get the class label
+                auto obj_id = std::find_if(std::begin(id_map), std::end(id_map), [&object_index](const auto &map_pair)
+                                           { return map_pair[0] == object_index; });
+
+                // Save the detected object
+                if (obj_id != std::end(id_map))
+                {
+                    detected_objects.emplace_back(object_index, (*obj_id)[1], x, y);
+                }
+                else
+                {
+                    detected_objects.emplace_back(object_index, 0, x, y);
+                }
+
+                // Output info to the image
+                cv::putText(image_indexing, "ID: " + std::to_string(object_index), cv::Point(x, y), cv::TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
+                cv::putText(image_indexing, "Class: " + std::to_string(object_index), cv::Point(x, y + TEXT_LINE_HEIGHT), cv::TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
+
+                // Decrement id
                 object_index--;
             }
         }
@@ -69,6 +112,7 @@ int main(int argc, char **argv)
     // Iterate through all indexed objects
     for (unsigned char obj_index = object_index + 1; obj_index < 255; obj_index++)
     {
+
         auto center_of_mass = ano::CenterOfMass(image_threshold, obj_index);
         float area = ano::Area(image_threshold, obj_index);
         auto F1 = std::pow(ano::Circumference(image_threshold, obj_index), 2) / (100 * area);
@@ -86,6 +130,20 @@ int main(int argc, char **argv)
                   << "\tF1: " << F1 << "\n"
                   << "\tF2: " << F2 << "\n\n"
                   << std::endl;
+
+        auto obj_it = ano::DetectedObjectsVectorGetByPixelID(detected_objects, obj_index);
+        if (obj_it == detected_objects.end())
+        {
+            std::cout << "Object not found" << std::endl;
+        }
+        else
+        {
+            auto &obj_features = obj_it->features;
+            obj_features.center_of_mass = center_of_mass;
+            obj_features.area = area;
+            obj_features.F1 = F1;
+            obj_features.F2 = F2;
+        }
     }
     /* ============== Moments ============== */
 

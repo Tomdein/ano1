@@ -11,15 +11,17 @@ static std::uniform_int_distribution<int> distr(range_from, range_to);
 namespace ano
 {
 
-    cv::Vec3b GenerateRandomColorBGR(const cv::Vec3b &color_mix)
+    cv::Vec3b GenerateRandomColorBGR(const cv::Vec3b &color_base, float mix_ratio_base, float lightness)
     {
         int red = distr(generator);
         int green = distr(generator);
         int blue = distr(generator);
 
-        red = (red + color_mix[0]) / 2;
-        green = (green + color_mix[1]) / 2;
-        blue = (blue + color_mix[2]) / 2;
+        auto mix_ratio_supplement = 1.0f - mix_ratio_base;
+
+        red = (red * mix_ratio_supplement + color_base[0] * mix_ratio_base) * lightness;
+        green = (green * mix_ratio_supplement + color_base[1] * mix_ratio_base) * lightness;
+        blue = (blue * mix_ratio_supplement + color_base[2] * mix_ratio_base) * lightness;
 
         return cv::Vec3b(blue, green, red);
     }

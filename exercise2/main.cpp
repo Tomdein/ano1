@@ -73,22 +73,20 @@ int main(int argc, char **argv)
                 ano::FloodFillInPlace(image_threshold, image_indexing, x, y, color, object_index);
 
                 // Get the class label
-                auto obj_id = std::find_if(std::begin(id_map), std::end(id_map), [&object_index](const auto &map_pair)
-                                           { return map_pair[0] == object_index; });
+                auto obj_id_it = std::find_if(std::begin(id_map), std::end(id_map), [&object_index](const auto &map_pair)
+                                              { return map_pair[0] == object_index; });
+                unsigned char obj_id = 0;
+                if (obj_id_it != std::end(id_map))
+                {
+                    obj_id = (*obj_id_it)[1];
+                }
 
                 // Save the detected object
-                if (obj_id != std::end(id_map))
-                {
-                    detected_objects.emplace_back(object_index, (*obj_id)[1], x, y);
-                }
-                else
-                {
-                    detected_objects.emplace_back(object_index, 0, x, y);
-                }
+                detected_objects.emplace_back(object_index, obj_id, x, y);
 
                 // Output info to the image
                 cv::putText(image_indexing, "ID: " + std::to_string(object_index), cv::Point(x, y), TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
-                cv::putText(image_indexing, "Class: " + std::to_string(object_index), cv::Point(x, y + TEXT_LINE_HEIGHT), TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
+                cv::putText(image_indexing, "Class: " + std::to_string(obj_id), cv::Point(x, y + TEXT_LINE_HEIGHT), TEXT_FONT, TEXT_SIZE, TEXT_COLOR, 1);
 
                 // Decrement id
                 object_index--;

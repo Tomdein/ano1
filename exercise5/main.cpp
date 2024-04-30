@@ -115,8 +115,84 @@ int main(int argc, char **argv)
     ano::bpnn::NN *nn = ano::bpnn::createNN(2, 5, 3);
 
     // Train NN:
+    constexpr int n_in = 2;  // == number of features
+    constexpr int n_out = 3; // == number of output neurons (classes)
+    constexpr int num_training_objects = 12;
+
+    double ***trainingSet = new double **[num_training_objects]; // N sets of outputs and inputs
+    for (int i = 0; i < num_training_objects; i++)
+    {
+        trainingSet[i] = new double *[2];      // 2 arrays: input and output values
+        trainingSet[i][0] = new double[n_in];  // Input values
+        trainingSet[i][1] = new double[n_out]; // Output values
+
+        // Get single training set:
+        auto train_data = id_map[i];
+        auto train_id = train_data[0];
+
+        // Fill inputs (manually as they are stored in a struct)
+        auto it = DetectedObjectsVectorGetByPixelID(detected_objects_train, train_id);
+        if (it == detected_objects_train.end())
+        {
+            throw "Invalid id for nn";
+        }
+        trainingSet[i][0][0] = it->features.F1;
+        trainingSet[i][0][1] = it->features.F2;
+
+        // Fill outputs
+        auto train_class = train_data[1];
+        for (int j = 0; j < n_out; j++)
+        {
+            // Set single neuron (corresponding to class) to 1 and others to 0
+            // neurons are numbered from 0, classes are numbered from 1 -> class - 1
+            trainingSet[i][1][j] = (train_class - 1 == j) ? 1 : 0;
+        }
+    }
+
+    constexpr int n = 1000; // Number of training iterations
+    double error = 1.0;
+    int i = 0;
+    while (error > 0.001)
+    {
+        ano::bpnn::setInput(nn, trainingSet[i % num_training_objects][0]);
+        ano::bpnn::feedforward(nn);
+        error = ano::bpnn::backpropagation(nn, trainingSet[i % num_training_objects][1]);
+        i++;
+        printf("\rerr=%0.3f", error);
+    }
+    printf(" (%d iterations)\n", i);
+
+    for (int i = 0; i < num_training_objects; i++)
+    {
+        delete[] trainingSet[i][0];
+        delete[] trainingSet[i][1];
+        delete[] trainingSet[i];
+    }
+    delete[] trainingSet;
 
     // Apply NN:
+    double *in = new double[nn->n[0]];
+    for (int i = 0; i < detected_objects_test.size(); i++)
+    {
+        for (auto &obj_test_it : detected_objects_test)
+        {
+            // Set input values
+            in[0] = obj_test_it.features.F1;
+            in[1] = obj_test_it.features.F2;
+
+            // Set NN input
+            ano::bpnn::setInput(nn, in, true);
+
+            // Feedforward
+            ano::bpnn::feedforward(nn);
+            int output = ano::bpnn::getOutput(nn, true);
+
+            // Set class of object
+            obj_test_it.id_class = output + 1;
+            obj_test_it.DrawClass(image_indexing_test, 0, TEXT_LINE_HEIGHT);
+        }
+    }
+    delete[] in;
 
     // Free NN:
     ano::bpnn::releaseNN(nn);

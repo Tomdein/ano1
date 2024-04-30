@@ -80,6 +80,8 @@ void test(ano::bpnn::NN *nn, int num_samples = 10)
     }
     double err = (double)num_err / num_samples;
     printf("test error: %.2f\n", err);
+
+    delete[] in;
 }
 
 int main(int argc, char **argv)

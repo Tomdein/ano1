@@ -4,7 +4,7 @@
 
 #include "backprop.hpp"
 
-void train(NN *nn)
+void train(ano::bpnn::NN *nn)
 {
     int n = 1000;
     double **trainingSet = new double *[n];
@@ -34,9 +34,9 @@ void train(NN *nn)
     int i = 0;
     while (error > 0.001)
     {
-        setInput(nn, trainingSet[i % n]);
-        feedforward(nn);
-        error = backpropagation(nn, &trainingSet[i % n][nn->n[0]]);
+        ano::bpnn::setInput(nn, trainingSet[i % n]);
+        ano::bpnn::feedforward(nn);
+        error = ano::bpnn::backpropagation(nn, &trainingSet[i % n][nn->n[0]]);
         i++;
         printf("\rerr=%0.3f", error);
     }
@@ -49,7 +49,7 @@ void train(NN *nn)
     delete[] trainingSet;
 }
 
-void test(NN *nn, int num_samples = 10)
+void test(ano::bpnn::NN *nn, int num_samples = 10)
 {
     double *in = new double[nn->n[0]];
 
@@ -70,10 +70,10 @@ void test(NN *nn, int num_samples = 10)
             }
         }
         printf("predicted: %d\n", !classA);
-        setInput(nn, in, true);
+        ano::bpnn::setInput(nn, in, true);
 
-        feedforward(nn);
-        int output = getOutput(nn, true);
+        ano::bpnn::feedforward(nn);
+        int output = ano::bpnn::getOutput(nn, true);
         if (output == classA)
             num_err++;
         printf("\n");
@@ -84,7 +84,7 @@ void test(NN *nn, int num_samples = 10)
 
 int main(int argc, char **argv)
 {
-    NN *nn = createNN(2, 4, 2);
+    ano::bpnn::NN *nn = ano::bpnn::createNN(2, 4, 2);
     train(nn);
 
     getchar();
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 
     getchar();
 
-    releaseNN(nn);
+    ano::bpnn::releaseNN(nn);
 
     return 0;
 }

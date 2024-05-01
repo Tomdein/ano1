@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 
 std::optional<cv::Mat> LoadImage(const cv::String &filename, const cv::String &window_name, bool show_img, int flags)
 {
-    cv::Mat image_in = cv::imread(filename, cv::IMREAD_GRAYSCALE);
+    cv::Mat image_in = cv::imread(filename, flags);
 
     if (!image_in.data)
     {

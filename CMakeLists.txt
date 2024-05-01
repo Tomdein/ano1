@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(ano1 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 unset(CUDA_ARCH_PTX)
@@ -31,3 +31,4 @@ add_subdirectory(bpnn)
 include_directories(./bpnn/include)
 
 add_subdirectory(exercise5)
+add_subdirectory(exercise6)

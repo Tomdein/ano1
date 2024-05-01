@@ -51,29 +51,4 @@ namespace ano
 
         return gradients;
     }
-
-    inline float DiffColor(const cv::Vec3b &color1, const cv::Vec3b &color2)
-    {
-        // diff = B_c1 - B_c2, G_c1 - G_c2, R_c1 - R_c2
-        auto diff = color1 - color2;
-        // sqrt((B_c1 - B_c2)^2, (G_c1 - G_c2)^2, (R_c1 - R_c2)^2)
-        return std::sqrt(diff.dot(diff));
-    }
-
-    inline float XDiffNeighbourColor(const cv::Mat &img, int x, int y)
-    {
-        return DiffColor(img.at<cv::Vec3b>(y, x + 1), img.at<cv::Vec3b>(y, x));
-    }
-
-    inline float YDiffNeighbourColor(const cv::Mat &img, int x, int y)
-    {
-        return DiffColor(img.at<cv::Vec3b>(y + 1, x), img.at<cv::Vec3b>(y, x));
-    }
-
-    inline float EuclidianDistance(int x1, int x2, int y1, int y2)
-    {
-        auto dx = (x1 - x2);
-        auto dy = (y1 - y2);
-        return sqrt(dx * dx + dy * dy);
-    }
 }

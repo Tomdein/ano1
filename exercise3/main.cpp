@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 
 std::optional<cv::Mat> LoadImage(const cv::String &filename, const cv::String &window_name, bool show_img, int flags)
 {
-    cv::Mat image_in = cv::imread(TRAIN_IMG_PATH, cv::IMREAD_GRAYSCALE);
+    cv::Mat image_in = cv::imread(TRAIN_IMG_PATH, flags);
 
     if (!image_in.data)
     {

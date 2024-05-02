@@ -24,8 +24,12 @@ int main(int argc, char **argv)
     }
     cv::Mat image_test = img_opt.value();
 
+    auto image_slic = cv::Mat();
     /* ============== SLIC ============== */
-    auto image_slic = ano::SLIC(image_test, 40, 1.0f);
+    // auto num_centroids = 180, m = 100000 / num_centroids;
+    // auto num_centroids = 18, m = 10; // From paper: https://www.researchgate.net/publication/44234783_SLIC_superpixels
+    auto num_centroids = 18, m = 25;
+    image_slic = ano::SLIC(image_test, num_centroids, m, 200, true);
     cv::namedWindow("SLIC", cv::WINDOW_AUTOSIZE);
     cv::imshow("SLIC", image_slic);
     /* ============== SLIC ============== */

@@ -11,15 +11,18 @@ namespace ano
 
     cv::Mat ComputeGradients(const cv::Mat &img, int start_x, int start_y, int w, int h)
     {
+        assert(start_x >= 0 && start_y >= 0);
+        assert(start_x + w <= img.size[1] && start_y + h <= img.size[0]);
+
         cv::Mat gradients(h, w, CV_32FC2);
 
         // Calculate all color differences between neighbours (excluding last row and col)
-        for (int y = start_y; y < h - 2 + start_y; y++)
+        for (int y = 0; y < h - 1; y++)
         {
-            for (int x = start_x; x < w - 2 + start_x; x++)
+            for (int x = 0; x < w - 1; x++)
             {
-                auto dX = XDiffNeighbourColor(img, x, y);
-                auto dY = YDiffNeighbourColor(img, x, y);
+                auto dX = XDiffNeighbourColor(img, start_x + x, start_y + y);
+                auto dY = YDiffNeighbourColor(img, start_x + x, start_y + y);
 
                 // Calculate gradient magnitude and orientation
                 auto orientation = std::atan2(dY, dX);

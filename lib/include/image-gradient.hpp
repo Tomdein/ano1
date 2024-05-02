@@ -12,11 +12,16 @@ namespace ano
     // Calculates color difference between 2 colors just like euclidian distance
     inline float DiffColor(const cv::Vec3b &color1, const cv::Vec3b &color2)
     {
+        int color1_b = color1[0], color1_g = color1[1], color1_r = color1[2];
+        int color2_b = color2[0], color2_g = color2[1], color2_r = color2[2];
+
         // diff = B_c1 - B_c2, G_c1 - G_c2, R_c1 - R_c2
-        // The Vec3b clamps the values to [0, 255] -> if one color channel is "bigger", it returns 0 in this channel
-        auto diff = (color1 - color2) + (color2 - color1);
+        auto diff_b = (color1_b - color2_b);
+        auto diff_g = (color1_g - color2_g);
+        auto diff_r = (color1_r - color2_r);
+
         // sqrt((B_c1 - B_c2)^2, (G_c1 - G_c2)^2, (R_c1 - R_c2)^2)
-        return std::sqrt(diff.dot(diff));
+        return std::sqrt(diff_b * diff_b + diff_g * diff_g + diff_r * diff_r);
     }
 
     // Calculates color difference in +x dir

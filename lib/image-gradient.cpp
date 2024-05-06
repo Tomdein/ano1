@@ -7,6 +7,9 @@ namespace ano
 
     cv::Mat ComputeGradients(const cv::Mat &img, int start_x, int start_y, int w, int h)
     {
+        cv::Mat img_greyscale;
+        cv::cvtColor(img, img_greyscale, cv::COLOR_BGR2GRAY);
+
         assert(start_x >= 0 && start_y >= 0);
         assert(start_x + w <= img.size[1] && start_y + h <= img.size[0]);
 
@@ -17,8 +20,8 @@ namespace ano
         {
             for (int x = 0; x < w - 1; x++)
             {
-                auto dX = XDiffNeighbourColor(img, start_x + x, start_y + y);
-                auto dY = YDiffNeighbourColor(img, start_x + x, start_y + y);
+                auto dX = img_greyscale.at<unsigned char>(start_y + y, start_x + x + 1) - img_greyscale.at<unsigned char>(start_y + y, start_x + x);
+                auto dY = img_greyscale.at<unsigned char>(start_y + y + 1, start_x + x) - img_greyscale.at<unsigned char>(start_y + y, start_x + x);
 
                 // Calculate gradient magnitude and orientation
                 auto orientation = std::atan2(dY, dX);

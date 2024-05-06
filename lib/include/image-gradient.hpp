@@ -5,9 +5,11 @@
 namespace ano
 {
     // Calculate gradients of part of the image. Both magnitude and orintation (angle -> 1 variable)
+    // Returned angles are in radians from -PI to PI!!!
     cv::Mat ComputeGradients(const cv::Mat &img, int x, int y, int w, int h);
 
     // Calculate gradients of the whole image. Both magnitude and orintation (angle -> 1 variable)
+    // Returned angles are in radians from -PI to PI!!!
     inline cv::Mat ComputeGradients(const cv::Mat &img)
     {
         return ComputeGradients(img, 0, 0, img.size[1], img.size[0]);
@@ -26,18 +28,6 @@ namespace ano
 
         // sqrt((B_c1 - B_c2)^2, (G_c1 - G_c2)^2, (R_c1 - R_c2)^2)
         return std::sqrt(diff_b * diff_b + diff_g * diff_g + diff_r * diff_r);
-    }
-
-    // Calculates color difference in +x dir
-    inline float XDiffNeighbourColor(const cv::Mat &img, int x, int y)
-    {
-        return DiffColor(img.at<cv::Vec3b>(y, x + 1), img.at<cv::Vec3b>(y, x));
-    }
-
-    // Calculates color difference in +y dir
-    inline float YDiffNeighbourColor(const cv::Mat &img, int x, int y)
-    {
-        return DiffColor(img.at<cv::Vec3b>(y + 1, x), img.at<cv::Vec3b>(y, x));
     }
 
     // Calculates euclidian distance between 2 points

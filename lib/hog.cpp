@@ -15,17 +15,23 @@ namespace ano
         int y_block_count = static_cast<int>(std::ceil(img_gradients.size[0] / (cells_in_block_count * cell_size))); // How many blocks in x dir
         int x_block_count = static_cast<int>(std::ceil(img_gradients.size[1] / (cells_in_block_count * cell_size))); // How many blocks in x dir
 
-        cv::Mat img_histogram(y_cell_count, x_cell_count, CV_32FC(nbins)); // The final histogram
+        int block_size_pixels = cells_in_block_count * cell_size; // Size of block in pixels
 
-        // 1. Add gradient to cell's histogram
+        // 1. Add gradient magnitudes to cell's histogram and Sum all gradients in each block
 
-        // Counts histogram occurances
-        int *histogram_counts = new int[y_cell_count * x_cell_count * nbins];                     // n ints for every orientation + 1 for pixel count ()
-        int *histogram_counts_end = histogram_counts + (y_cell_count * x_cell_count * nbins + 1); // Iterator end
-        int *histogram_counts_it = histogram_counts;                                              // Iterator
+        // Gradient histogram for every cell
+        float *histogram = new float[y_cell_count * x_cell_count * nbins];            // n ints for every orientation + 1 for pixel count ()
+        float *histogram_end = histogram + (y_cell_count * x_cell_count * nbins + 1); // Iterator end
+        float *histogram_it = histogram;                                              // Iterator
 
         // Zero the histogram counts
-        memset(histogram_counts, 0, y_cell_count * x_cell_count * nbins);
+        memset(histogram, 0, y_cell_count * x_cell_count * nbins);
+
+        // Sum of all bins in block
+        float *histogram_block_sum = new float[y_block_count * x_block_count]; // n floats for every orientation + 1 for pixel count ()
+
+        // Zero the histogram counts
+        memset(histogram_block_sum, 0, y_block_count * x_block_count);
 
         // Angle difference between bins
         const float bin_delta = 360.0f / nbins;
@@ -35,15 +41,17 @@ namespace ano
         {
             // Current cell in y dir
             int y_cell = y / cell_size;
+            int y_block = y / block_size_pixels;
 
             // For every pixel in x direction
             for (int x = 0; x < img_gradients.size[1]; x++)
             {
                 // Current cell in x dir
                 int x_cell = x / cell_size;
+                int x_block = x / block_size_pixels;
 
                 // Move pointer to current cell's histogram counts
-                histogram_counts_it = histogram_counts + (y_cell * x_cell_count + x_cell) * nbins;
+                histogram_it = histogram + (y_cell * x_cell_count + x_cell) * nbins;
 
                 // Calculate bin
                 auto pixel = img_gradients.at<cv::Vec2f>(y, x);
@@ -51,57 +59,45 @@ namespace ano
 
                 assert(bin >= 0 && bin < nbins);
 
-                // Add +1 to bin histogram
-                *(histogram_counts_it + bin) += 1;
+                // Add gradient magnitude to bin histogram
+                *(histogram_it + bin) += pixel[1];
+
+                // Sum gradient magnitudes in block
+                histogram_block_sum[y_block * x_block_count + x_block] += pixel[1];
             }
         }
 
-        // 2. Sum all gradients in each block
+        // 2. Normalize the cell's histogram by block's gradient sum
 
-        // Counts number of pixels in cell
-        int *histogram_cell_pixels_count = new int[y_cell_count * x_cell_count];                                // n ints for every orientation + 1 for pixel count ()
-        int *histogram_cell_pixels_count_end = histogram_cell_pixels_count + (y_cell_count * x_cell_count + 1); // Iterator end
-        int *histogram_cell_pixels_count_counts_it = histogram_cell_pixels_count;                               // Iterator
-
-        // Zero the pixel counts for cell
-        memset(histogram_cell_pixels_count, 0, y_cell_count * x_cell_count);
-
-        // Counts histogram occurances
-        float *histogram_block_pixels_count = new float[y_block_count * x_block_count];                               // n floats for every orientation + 1 for pixel count ()
-        float *histogram_block_pixels_count_end = histogram_block_pixels_count + (y_block_count * x_block_count + 1); // Iterator end
-        float *histogram_block_pixels_count_it = histogram_block_pixels_count;                                        // Iterator
-
-        // Zero the histogram counts
-        memset(histogram_block_pixels_count, 0, y_block_count * x_block_count);
-
-        for (int y = 0; y < y_cell_count; y++)
+        // For every cell in y direction
+        for (int y_cell = 0; y_cell < y_cell_count; y_cell++)
         {
             // Current cell in y dir
-            int y_block = y / cells_in_block_count;
+            int y_block = y_cell / cells_in_block_count;
 
-            for (int x = 0; x < x_cell_count; x++)
+            // For every cell in x direction
+            for (int x_cell = 0; x_cell < x_cell_count; x_cell++)
             {
-                int x_block = x / cells_in_block_count;
+                // Current cell in x direction
+                int x_block = x_cell / cells_in_block_count;
+
+                // Move pointer to current cell's histogram counts
+                histogram_it = histogram + (y_cell * x_cell_count + x_cell) * nbins;
+
+                // Normalize cell's histogram by block's gradient sum
+                for (int i = 0; i < nbins; i++)
+                {
+                    histogram_it[i] /= histogram_block_sum[y_block * x_block_count + x_block];
+                }
             }
         }
 
-        // 3. Normalize the cell's histogram by block's gradient sum
+        // Ctor with *data does not copy the data from pointer and DOES NOT DEALOCATE the data -> do a copy a be done with it
+        cv::Mat img_histogram = cv::Mat(y_cell_count, x_cell_count, CV_32FC(nbins), histogram, cv::Mat::CONTINUOUS_FLAG).clone(); // The final histogram
 
-        for (int y = 0; y < y_cell_count; y++)
-        {
-            // Current cell in y dir
-            int y_block = y / cells_in_block_count;
+        delete[] (histogram_block_sum);
+        delete[] (histogram);
 
-            for (int x = 0; x < x_cell_count; x++)
-            {
-                int x_block = x / cells_in_block_count;
-            }
-        }
-
-        delete[] (histogram_block_pixels_count);
-        delete[] (histogram_counts);
-        delete[] (histogram_cell_pixels_count);
-
-        return;
+        return img_histogram;
     }
 }

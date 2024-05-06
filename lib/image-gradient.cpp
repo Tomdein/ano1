@@ -4,10 +4,6 @@
 
 namespace ano
 {
-    inline cv::Mat ComputeGradients(const cv::Mat &img)
-    {
-        return ComputeGradients(img, 0, 0, img.size[1], img.size[0]);
-    }
 
     cv::Mat ComputeGradients(const cv::Mat &img, int start_x, int start_y, int w, int h)
     {

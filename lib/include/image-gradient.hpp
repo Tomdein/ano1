@@ -4,10 +4,14 @@
 
 namespace ano
 {
-    // Calculate gradients of the whole image. Both magnitude and orintation (angle -> 1 variable)
-    inline cv::Mat ComputeGradients(const cv::Mat &img);
     // Calculate gradients of part of the image. Both magnitude and orintation (angle -> 1 variable)
     cv::Mat ComputeGradients(const cv::Mat &img, int x, int y, int w, int h);
+
+    // Calculate gradients of the whole image. Both magnitude and orintation (angle -> 1 variable)
+    inline cv::Mat ComputeGradients(const cv::Mat &img)
+    {
+        return ComputeGradients(img, 0, 0, img.size[1], img.size[0]);
+    }
 
     // Calculates color difference between 2 colors just like euclidian distance
     inline float DiffColor(const cv::Vec3b &color1, const cv::Vec3b &color2)

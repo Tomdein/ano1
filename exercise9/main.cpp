@@ -5,7 +5,8 @@
 #include <opencv2/opencv.hpp>
 
 #include "text.hpp"
-#include "slic.hpp"
+#include "image-gradient.hpp"
+#include "hog.hpp"
 
 #define TEST_IMG_PATH "../../img/slic_bears.jpg"
 #define TEST_IMG_NAME "Test_image"
@@ -24,9 +25,21 @@ int main(int argc, char **argv)
     }
     cv::Mat image_test = img_opt.value();
 
-    /* ============== SLIC ============== */
+    /* ============== HoG ============== */
+    auto gradients = ano::ComputeGradients(image_test);
 
-    /* ============== SLIC ============== */
+    auto block_size = 2; // Number off cells in block
+    auto cell_size = 8;  // Number of pixels in a cell
+    auto nbins = 9;      // Number of bins in a histogram
+    auto HoG = ano::HoG(gradients, block_size, cell_size, nbins);
+    auto HoG_greyscale = HoG.reshape(1, std::vector<int>({HoG.size[0], HoG.size[1] * nbins})); // Keep the y size of HoG the same. Expand in y dir
+
+    // auto HoG_visualize = ano::HoGVisualizeByAlpha(HoG, cell_size * 4, nbins);
+    auto HoG_visualize = ano::HoGVisualizeByLenght(HoG, cell_size * 4, nbins);
+
+    cv::namedWindow("HoG", cv::WINDOW_KEEPRATIO || cv::WINDOW_NORMAL);
+    cv::imshow("HoG", HoG_visualize);
+    /* ============== HoG ============== */
 
     cv::waitKey(0);
 

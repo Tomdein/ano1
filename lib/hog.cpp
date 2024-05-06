@@ -2,6 +2,7 @@
 // Histogram of Oriented Gradients (HOG) descriptor
 
 #include <vector>
+#include <cmath>
 
 namespace ano
 {
@@ -9,11 +10,11 @@ namespace ano
     // If cells_in_block_count * cell_size != image size -> the histogram is averaged from less pixels
     cv::Mat HoG(const cv::Mat &img_gradients, const int cells_in_block_count, const int cell_size, const int nbins)
     {
-        int y_cell_count = static_cast<int>(std::ceil(img_gradients.size[0] / cell_size)); // How many cells in y dir
-        int x_cell_count = static_cast<int>(std::ceil(img_gradients.size[1] / cell_size)); // How many cells in x dir
+        int y_cell_count = static_cast<int>(std::ceil(img_gradients.size[0] / static_cast<float>(cell_size))); // How many cells in y dir
+        int x_cell_count = static_cast<int>(std::ceil(img_gradients.size[1] / static_cast<float>(cell_size))); // How many cells in x dir
 
-        int y_block_count = static_cast<int>(std::ceil(img_gradients.size[0] / (cells_in_block_count * cell_size))); // How many blocks in x dir
-        int x_block_count = static_cast<int>(std::ceil(img_gradients.size[1] / (cells_in_block_count * cell_size))); // How many blocks in x dir
+        int y_block_count = static_cast<int>(std::ceil(img_gradients.size[0] / static_cast<float>(cells_in_block_count * cell_size))); // How many blocks in x dir
+        int x_block_count = static_cast<int>(std::ceil(img_gradients.size[1] / static_cast<float>(cells_in_block_count * cell_size))); // How many blocks in x dir
 
         int block_size_pixels = cells_in_block_count * cell_size; // Size of block in pixels
 
@@ -34,7 +35,8 @@ namespace ano
         memset(histogram_block_sum, 0, y_block_count * x_block_count);
 
         // Angle difference between bins
-        const float bin_delta = 360.0f / nbins;
+
+        const float bin_delta = 2.0f * M_PIf / nbins;
 
         // For every pixel in y direction
         for (int y = 0; y < img_gradients.size[0]; y++)
@@ -51,11 +53,13 @@ namespace ano
                 int x_block = x / block_size_pixels;
 
                 // Move pointer to current cell's histogram counts
-                histogram_it = histogram + (y_cell * x_cell_count + x_cell) * nbins;
+                histogram_it = histogram + ((y_cell * x_cell_count + x_cell) * nbins);
 
                 // Calculate bin
                 auto pixel = img_gradients.at<cv::Vec2f>(y, x);
-                int bin = static_cast<int>(std::floor(pixel[0] / bin_delta));
+                auto pixel_angle = std::min(std::max(pixel[0], -M_PIf + 1e-4f), M_PIf - 1e-4f); // Exclude -PI and +PI -> due to finding the bins
+
+                int bin = static_cast<int>(std::floor((pixel_angle + M_PIf) / bin_delta)); // Move from [-PI, PI] to [0, 2*PI]
 
                 assert(bin >= 0 && bin < nbins);
 
@@ -82,7 +86,7 @@ namespace ano
                 int x_block = x_cell / cells_in_block_count;
 
                 // Move pointer to current cell's histogram counts
-                histogram_it = histogram + (y_cell * x_cell_count + x_cell) * nbins;
+                histogram_it = histogram + ((y_cell * x_cell_count + x_cell) * nbins);
 
                 // Normalize cell's histogram by block's gradient sum
                 for (int i = 0; i < nbins; i++)
@@ -93,11 +97,100 @@ namespace ano
         }
 
         // Ctor with *data does not copy the data from pointer and DOES NOT DEALOCATE the data -> do a copy a be done with it
-        cv::Mat img_histogram = cv::Mat(y_cell_count, x_cell_count, CV_32FC(nbins), histogram, cv::Mat::CONTINUOUS_FLAG).clone(); // The final histogram
+        cv::Mat img_histogram = cv::Mat(y_cell_count, x_cell_count, CV_32FC(nbins), histogram, cv::Mat::AUTO_STEP).clone(); // The final histogram
 
         delete[] (histogram_block_sum);
         delete[] (histogram);
 
         return img_histogram;
+    }
+#include "text.hpp"
+
+    cv::Mat HoGVisualizeByAlpha(const cv::Mat &hog, const int cell_size, const int nbins, const float color_multiply)
+    {
+        auto dims = std::vector<int>{hog.size[0], hog.size[1] * nbins};
+        auto hog_flat = hog.reshape(1, dims);
+
+        cv::Mat visualization(cell_size * hog.size[0], cell_size * hog.size[1], CV_8UC1);
+
+        auto cell_center = std::ceil(static_cast<float>(cell_size) / 2);
+        auto line_lenght = (cell_size / 2) - 1;
+
+        const float bin_delta = M_PIf / nbins;
+
+        // For every y cell
+        for (int y = 0; y < hog.size[0]; y++)
+        {
+            // For every x cell
+            for (int x = 0; x < hog.size[1]; x++)
+            {
+
+                auto center_x = x * cell_size + cell_center;
+                auto center_y = y * cell_size + cell_center;
+
+                // For every bin in the cell
+                for (int i = 0; i < nbins; i++)
+                {
+                    auto bin_angle = bin_delta * i - M_PIf; // [-PI, PI]
+
+                    auto dx = std::cos(bin_angle) * line_lenght;
+                    auto dy = -std::sin(bin_angle) * line_lenght; // y+ is downwards and x+ is right -> -sin(a)
+
+                    auto alpha = hog_flat.at<float>(y, x * nbins + i);
+
+                    // Draw the gradient orientation
+                    cv::line(visualization,
+                             cv::Point(center_x, center_y),
+                             cv::Point(center_x + dx, center_y + dy),
+                             cv::Vec3b(255, 255, 255) * alpha * color_multiply);
+                }
+            }
+        }
+
+        return visualization;
+    }
+
+    cv::Mat HoGVisualizeByLenght(const cv::Mat &hog, const int cell_size, const int nbins, const float length_multiply)
+    {
+        auto dims = std::vector<int>{hog.size[0], hog.size[1] * nbins};
+        auto hog_flat = hog.reshape(1, dims);
+
+        cv::Mat visualization(cell_size * hog.size[0], cell_size * hog.size[1], CV_8UC1);
+
+        auto cell_center = std::ceil(static_cast<float>(cell_size) / 2);
+        auto line_lenght = (cell_size / 2) - 1;
+
+        const float bin_delta = M_PIf / nbins;
+
+        // For every y cell
+        for (int y = 0; y < hog.size[0]; y++)
+        {
+            // For every x cell
+            for (int x = 0; x < hog.size[1]; x++)
+            {
+
+                auto center_x = x * cell_size + cell_center;
+                auto center_y = y * cell_size + cell_center;
+
+                // For every bin in the cell
+                for (int i = 0; i < nbins; i++)
+                {
+                    auto bin_angle = bin_delta * i - M_PIf; // [-PI, PI]
+
+                    auto alpha = hog_flat.at<float>(y, x * nbins + i);
+
+                    auto dx = std::cos(bin_angle) * line_lenght * alpha * length_multiply;
+                    auto dy = -std::sin(bin_angle) * line_lenght * alpha * length_multiply; // y+ is downwards and x+ is right -> -sin(a)
+
+                    // Draw the gradient orientation
+                    cv::line(visualization,
+                             cv::Point(center_x, center_y),
+                             cv::Point(center_x + dx, center_y + dy),
+                             cv::Vec3b(255, 255, 255));
+                }
+            }
+        }
+
+        return visualization;
     }
 }

@@ -32,3 +32,4 @@ include_directories(./bpnn/include)
 
 add_subdirectory(exercise5)
 add_subdirectory(exercise6)
+add_subdirectory(exercise9)

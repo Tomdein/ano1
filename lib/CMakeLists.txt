@@ -8,4 +8,5 @@ add_library(ano-lib
     ethalons.cpp
     k-means-clustering.cpp
     image-gradient.cpp
-    slic.cpp)
+    slic.cpp
+    hog.cpp)
